@@ -1,0 +1,12 @@
+a.out
+assembly.asm
+biondo
+foo.cpp
+makefile
+mf-backup
+oblectFile.obj
+preProcessed.ii
+script
+testo1.txt
+testo2.txt
+tmp

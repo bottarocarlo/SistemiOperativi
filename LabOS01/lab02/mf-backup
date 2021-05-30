@@ -1,0 +1,12 @@
+NOME = $(FOLDER).bak
+
+all: copy
+	@echo "DONE!"
+
+create: 
+	@echo "creero' una cartella di backup di: " $(FOLDER) " e aggiungero' un .bak"
+	@echo $(NOME)
+	mkdir $(NOME)
+
+copy: create
+	cp -r -a $(FOLDER) $(NOME)

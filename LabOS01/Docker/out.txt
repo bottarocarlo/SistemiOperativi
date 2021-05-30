@@ -1,0 +1,22 @@
+[H[2J[3J
+err.txt
+esercizio1.sh
+exec.c
+exec.o
+file
+file.txt
+invert.c
+invert.o
+lenghtof.c
+lenghtof.o
+makefile
+out.txt
+piping.c
+piping.o
+printchar.c
+printchar.o
+tmp
+       0       0       0
+      20      22     190
+      21      25     215
+      22      28     240
