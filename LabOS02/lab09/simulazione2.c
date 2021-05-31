@@ -19,11 +19,6 @@
 #define WR 1
 #define RD 0
 
-struct msg_buffer
-{
-    char payload[3];
-    int type;
-}msg;
 
 int br[MAX_DEPHT];
 int numChildren = 1;
