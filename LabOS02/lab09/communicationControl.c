@@ -103,7 +103,7 @@ int main(int argc, char ** argv){
                 int tmp = getpid();
                 write(input[proc][WR],&tmp,sizeof(tmp)); //Send pid
             }
-        }     
+            }     
         }
         
     }
