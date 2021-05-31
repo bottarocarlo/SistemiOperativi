@@ -2,14 +2,8 @@
 
 BINARIES=$(patsubst %.c,%.o,$(wildcard *.c))
 
-all: $(BINARIES) file.txt file
+all: $(BINARIES)
 	@echo Done! 
-
-file.txt:
-	@echo "hello wonderful world" > $@
-
-file:
-	@touch $@
 
 %.o: %.c
 	gcc $^ -o $@
