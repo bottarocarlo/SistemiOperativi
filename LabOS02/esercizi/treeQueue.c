@@ -27,12 +27,12 @@ int pid[MAX_DEPHT],proc;
 char buffer[10];
 extern int errno;
 
+
 //coda di messaggi
-struct msg_buffer
-{
-    char payload;
+struct msg_buffer{
+    char mtext[10];
     int type;
-}msg,msgR;
+}msg,msgpRcv;
 
 void quit(){
     for(int i=1;i<MAX_DEPHT;i++){
@@ -49,15 +49,22 @@ int main(int argc,char ** argv){
     printf("%s[MAIN][%d] created%s\n",GREEN,getpid(),DF);
     pid[0]=getpid();
 
-    creat("/tmp/tree",0777);
-	key_t k = ftok("/tmp/tree",1);
-	int queueId=msgget(k,0777|IPC_CREAT);
+   //Create file for queue
+    creat("/tmp/tree", 0777);
+    key_t treeKey1 = ftok("/tmp/tree",1);
+    
+    //Remove queue if already exists
+    int queueId = msgget(treeKey1,0777|IPC_CREAT);
+    msgctl(queueId,IPC_RMID,NULL);
+    queueId = msgget(treeKey1,0777|IPC_CREAT);
 
     if(queueId == -1){
         fprintf(stderr, "errno = %d\n", errno);
         perror("Error printed by perror");
         fprintf(stderr,"Strerror: %s\n", strerror(errno));
     }
+
+    int queue;
 
     for(int i =1;i < MAX_DEPHT;i++){
         pid[i]=fork();
@@ -70,6 +77,7 @@ int main(int argc,char ** argv){
     }
 
     if(getpid()==pid[0]){
+        queue = queueId;
         while (1)
         {
             /* father */
@@ -77,16 +85,15 @@ int main(int argc,char ** argv){
             printf("Next command:\t");fflush(NULL);
             read(STDIN_FILENO,buffer,10);
             if(buffer[0]=='q'){
-                msgctl(queueId, IPC_RMID, NULL);
                 quit();
             }else if(buffer[0]=='k' || buffer[0]=='c'){
                 level = atoi(buffer+1);
                 msg.type = level;
-                msg.payload = buffer[0];
-                int esito = msgsnd(queueId , &msg, sizeof(msg.payload),0);
+                strcpy(msg.mtext,buffer);
+                int esito = msgsnd(queue , &msg, sizeof(msg.mtext),0);
                 
                 if (esito>=0){
-                    printf("%s[SND] %c , %d%s\n",GREEN,msg.payload,msg.type,DF);
+                    printf("%s[SND] %s %s\n",GREEN,msg.mtext,DF);
                 }else{
                     fprintf(stderr, "errno = %d\n", errno);
                     perror("Error printed by perror");
@@ -97,22 +104,26 @@ int main(int argc,char ** argv){
         
 
     }else{
-        while (1)
+        int r ;
+        do
         {
-            pause();
-            printf("ciao\n");
-            msgrcv(queueId,&msgR,sizeof(msgR.payload),proc,0);
-            
-           
-            if(msgR.payload=='c'){
-                printf("%s[RCV][%d]:%d%s\n",GREEN,getpid(),msgR.payload,DF);
+        msgrcv(queue,&msgpRcv,sizeof(msgpRcv.mtext),proc,0);
+            switch (msgpRcv.mtext[0])
+            {
+            case 'c':
+                /* create */
+                //kill(master[level],SIGUSR1);
+                printf("create\n");
+                break;
+            case 'k':
+                //kill(-master[level],SIGTERM);
+                printf("kill\n");
+            break;
+            default:
+                break;
             }
-            sleep(1);
-             fflush(NULL);
-        }
-        
+        }while (1);
     }
-
 
 
 
