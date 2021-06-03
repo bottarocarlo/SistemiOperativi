@@ -23,18 +23,145 @@
 #define WHITE "\033[0;37m"
 #define DF "\033[0m"
 
-#define MAX_DEPHT 5
+#define MAX 5
+#define LENGTH 20
+
+int slave, master, pid[MAX], id;
+char buffer[LENGTH];
+int sender,receiver;
+extern int errno;
+
+int fd; 
+char * fifoName = "/tmp/fifo1";
 
 struct msg_buffer
 {
-    char payload[3];
+    char messg[LENGTH];
     int type;
 }msg;
 
+void quit(){
+    for(int i=0;i<slave;i++){
+        kill(pid[i],SIGTERM);
+        printf("%s[%d] killed!%s\n",RED,pid[i],DF);
+    }
+    while(wait(NULL)>0);
+    exit(0);
+}
+
+void send(int sigNum){
+    printf("[%d]Send '%s'\n", id ,msg.messg);
+    
+    fd = open(fifoName, O_WRONLY); // Open FIFO for write only 
+    write(fd, &msg.messg, sizeof(msg.messg)); // write and close
+    close(fd);
+}
+
+void receive(int sigNum){
+    char str1[LENGTH];
+    
+    fd = open(fifoName, O_RDONLY); // Open FIFO for Read only 
+    read(fd, str1, sizeof(str1)); // Read from FIFO
+    printf("[%d]Received '%s'\n", id ,str1);
+    close(fd);
+
+}
+
+void message(){
+    char appo[LENGTH];
+    for(int i = 0; i< strlen(buffer);i++){
+        appo[i] = buffer[i+3];
+    }
+    strcpy(buffer,appo);
+}
 
 int main(int argc,char ** argv){
-    
+    int r;
 
+    signal(SIGUSR1,send);
+    signal(SIGUSR2,receive);
+
+    if(argc < 2){
+        fprintf(stderr,"usage error\n");
+        exit(-1);
+    }
+    slave = atoi(argv[1]);
+    if(slave>MAX){
+        fprintf(stderr,"usage parameter\n");
+        exit(-2);
+    }
+    master = getpid();
+
+    mkfifo(fifoName,S_IRUSR|S_IWUSR);
+
+    creat("/tmp/tree",0777);
+	key_t k = ftok("/tmp/tree",1);
+	int queueId=msgget(k,0777|IPC_CREAT);
+    if(queueId==-1){
+        fprintf(stderr, "errno = %d\n", errno);
+        perror("Error printed by perror");
+        fprintf(stderr,"Strerror: %s\n", strerror(errno));
+    }
+
+    for(int i =0;i<slave;i++){
+        pid[i] = fork();
+        if(getpid()!=master){
+            id = i;
+            printf("%s[%d][%d] created!%s\n",GREEN,getpid(),id,DF);
+            break;
+        }
+    }
+
+    if(getpid()==master){
+        while(1){
+            sleep(1);
+            printf("Next command:\t");fflush(NULL);
+            read(STDIN_FILENO,buffer,10);
+            if(buffer[0]=='q'){
+                msgctl(queueId, IPC_RMID, NULL);
+                quit();
+            }else if(buffer[1]=='<' || buffer[1]=='>'){
+            switch (buffer[1])
+            {
+            case '<':
+                /* code */
+                sender = atoi(&buffer[2]);
+                receiver = atoi(&buffer[0]);
+                break;
+            case '>':
+                /* code */
+                sender = atoi(&buffer[0]);
+                receiver = atoi(&buffer[2]);
+                break;
+            default:
+                break;
+            }
+            //message();
+            strcpy(msg.messg,buffer);
+            msg.type = sender;
+            int esito = msgsnd(queueId , &msg, sizeof(msg.messg),0);
+            if (esito<0){
+                fprintf(stderr, "SEND ERROR: %d\n", errno);
+                perror("Error printed by perror");
+                fprintf(stderr,"Strerror: %s\n", strerror(errno));
+            }
+            //SEND
+            sleep(1);
+            kill(pid[sender],SIGUSR1);
+            sleep(1);
+            kill(pid[receiver],SIGUSR2);
+            }
+        }
+    }else{
+        int outcome;
+        while(1){
+            outcome = msgrcv(queueId,&msg,sizeof(msg.messg),id,0);
+            if(outcome!=1){
+                strcpy(buffer,msg.messg);
+            }
+            outcome=0;
+        }
+    }
 
     return 0;
 }
