@@ -23,21 +23,24 @@
 #define WHITE "\033[0;37m"
 #define DF "\033[0m"
 
-#define MAX 5
+#define MAX 10
 #define LENGTH 20
 
-int slave, master, pid[MAX], id;
+int slave, master, pid[MAX];
+long id;
 char buffer[LENGTH];
 int sender,receiver;
 extern int errno;
+int queueId;
+
 
 int fd; 
-char * fifoName = "/tmp/fifo1";
+char * fifoName = "/tmp/fifo";
 
 struct msg_buffer
 {
     char messg[LENGTH];
-    int type;
+    long type;
 }msg;
 
 void quit(){
@@ -50,19 +53,18 @@ void quit(){
 }
 
 void send(int sigNum){
-    printf("[%d]Send '%s'\n", id ,msg.messg);
+    printf("[%ld]Send '%s'\n", id ,buffer);
     
     fd = open(fifoName, O_WRONLY); // Open FIFO for write only 
-    write(fd, &msg.messg, sizeof(msg.messg)); // write and close
+    write(fd, buffer, sizeof(buffer)); // write and close
     close(fd);
 }
 
 void receive(int sigNum){
-    char str1[LENGTH];
     
     fd = open(fifoName, O_RDONLY); // Open FIFO for Read only 
-    read(fd, str1, sizeof(str1)); // Read from FIFO
-    printf("[%d]Received '%s'\n", id ,str1);
+    read(fd, buffer, sizeof(buffer)); // Read from FIFO
+    printf("[%ld]Received '%s'\n", id ,buffer);
     close(fd);
 
 }
@@ -96,7 +98,7 @@ int main(int argc,char ** argv){
 
     creat("/tmp/tree",0777);
 	key_t k = ftok("/tmp/tree",1);
-	int queueId=msgget(k,0777|IPC_CREAT);
+	queueId=msgget(k,0777|IPC_CREAT);
     if(queueId==-1){
         fprintf(stderr, "errno = %d\n", errno);
         perror("Error printed by perror");
@@ -107,7 +109,7 @@ int main(int argc,char ** argv){
         pid[i] = fork();
         if(getpid()!=master){
             id = i;
-            printf("%s[%d][%d] created!%s\n",GREEN,getpid(),id,DF);
+            printf("%s[%d][%ld] created!%s\n",GREEN,getpid(),id,DF);
             break;
         }
     }
@@ -136,15 +138,17 @@ int main(int argc,char ** argv){
             default:
                 break;
             }
-            //message();
+            message();
+            
             strcpy(msg.messg,buffer);
-            msg.type = sender;
+            msg.type = (long) sender;
             int esito = msgsnd(queueId , &msg, sizeof(msg.messg),0);
             if (esito<0){
                 fprintf(stderr, "SEND ERROR: %d\n", errno);
                 perror("Error printed by perror");
                 fprintf(stderr,"Strerror: %s\n", strerror(errno));
             }
+
             //SEND
             sleep(1);
             kill(pid[sender],SIGUSR1);
@@ -152,14 +156,16 @@ int main(int argc,char ** argv){
             kill(pid[receiver],SIGUSR2);
             }
         }
+        while(wait(NULL)>0);
     }else{
         int outcome;
         while(1){
             outcome = msgrcv(queueId,&msg,sizeof(msg.messg),id,0);
-            if(outcome!=1){
+            
+            if(outcome!=-1){
                 strcpy(buffer,msg.messg);
+                printf("RECEIVED SMTH %d , %s\n",getpid(),msg.messg);
             }
-            outcome=0;
         }
     }
 
