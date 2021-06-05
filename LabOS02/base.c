@@ -27,8 +27,8 @@
 
 struct msg_buffer
 {
-    char payload[3];
-    int type;
+    char mtext[10];
+    long mtype;
 }msg;
 
 
