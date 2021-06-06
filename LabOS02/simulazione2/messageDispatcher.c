@@ -31,6 +31,7 @@ int pip[MAX_DEPHT][2];
 
 void loop(){
     int r;
+    int len;
     r = read(pip[proc][READ],&buffer,30);
     while(mem[len]!='\n'){
         len++;
