@@ -8,5 +8,5 @@ echo PATH: 	$SCRIPTPATH
 #echo inserisci matricola
 #read $matr
 echo 		comprimendo
-zip -r labso2021-01a--$matr.zip $matr
+zip -r $matr.zip $matr
 echo 		compresso

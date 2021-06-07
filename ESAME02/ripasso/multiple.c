@@ -27,14 +27,26 @@
 
 struct msg_buffer
 {
-    char mtext[10];
+    char mtext[20];
     long mtype;
 }msg;
 
-int pid[MAX_DEPHT] , master , id;
+extern int errno;
+int pid[MAX_DEPHT] , master ;
+long id;
 
 int main(int argc,char ** argv){
     master = getpid();
+
+    creat("/tmp/unique",0777);
+	key_t k = ftok("/tmp/unique",1);
+	int queueId=msgget(k,0777|IPC_CREAT);
+
+    if(queueId==-1){
+        fprintf(stderr, "errno = %d\n", errno);
+        perror("Error printed by perror");
+        fprintf(stderr,"Strerror: %s\n", strerror(errno));
+    }
 
     for(int i =0;i<MAX_DEPHT;i++){
         pid[i] = fork();
@@ -46,7 +58,25 @@ int main(int argc,char ** argv){
     }
 
     if(getpid()==master){
-        
+
+        for(int i =0;i<MAX_DEPHT;i++){
+            printf("[MAIN]sending message to: %d!\n",i);
+            strcpy(msg.mtext,"first message");
+            msg.mtype=i;
+            
+            int esito = msgsnd(queueId , &msg, sizeof(msg.mtext),0);
+            if (esito<0){
+                fprintf(stderr, "errno = %d\n", errno);
+                perror("Error printed by perror");
+                fprintf(stderr,"Strerror: %s\n", strerror(errno));   
+            }
+            sleep(1);
+        }
+        while(wait(NULL)>0);
+
+    }else{
+        int outcome = msgrcv(queueId,&msg,sizeof(msg.mtext),0,id);
+        printf("[RCV]:%s\n",msg.mtext);
     }
 
     return 0;

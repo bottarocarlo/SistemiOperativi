@@ -38,7 +38,6 @@ int main(){
     printf("long: %lu\n",sizeof(long));
 
 
-
     
     exit(5);// posso usare in maniera indifferente return 0; o la funzione exit
 }   

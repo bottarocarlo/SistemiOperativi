@@ -1,54 +1,95 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <time.h>
-#include <sys/wait.h>
-#include <sys/types.h> 
-#include <sys/msg.h>
-#include <sys/ipc.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <string.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<sys/msg.h>
+#include<sys/types.h>
+#include<sys/ipc.h>
+#include<unistd.h>
+#include<string.h>
+#include<time.h>
+#include<signal.h>
+#define MAX_CHILDS 10
+#define RED "\e[0;31m"
+#define GREEN "\e[0;32m"
+#define DF "\e[0m"
+#define RCV_MESS "rcv"
 
-#define RED "\033[0;31m"
-#define GREEN "\033[32m"
-#define DF "\033[0m"
+void cerr(char *s){
+    fprintf(stderr,"%s%s%s\n",RED,s,DF);
+}
 
-//struct of queue
-struct msg_buffer{
-    long type;
-    char text[100];
-}msg1,msg2;
+void quit(){
+    kill(-getpid(),SIGKILL);
+}
 
-int queueId;
+typedef struct msg{
+    long mtype;
+    char mtext[50];
+}msg;
+
 
 int main(int argc,char **argv){
-    
-   //creazione della coda
-    creat("/tmp/tree",0777);
-	key_t k = ftok("/tmp/tree",1);
-	queueId=msgget(k,0777|IPC_CREAT); 
-    
-    printf("%s[SND][queue key]: %d%s\n",GREEN,k,DF);
-    printf("%s[SND][queue ID]: %d%s\n",GREEN,queueId,DF);
-    
-    if(fork()==0){
-        strcpy(msg1.text,"sending message");
-        msg1.type = 1;
-        int esito = msgsnd(queueId , &msg1, sizeof(msg1.text),0);
-        if (esito>=0){
-            //printf("%s[SND][msg.txt]:%s%s\n",GREEN,msg1.text,DF);
-        }else{
-            fprintf(stderr,"%ssend error%s\n",RED,DF);
-        }
-        while(1);
-    }else{
-        //while(wait(NULL)>0);
-        long id = 1;
-        msgrcv(queueId,&msg2,sizeof(msg2.text),id,0);
-        printf("%s[RCV][msg.txt]:%s%s\n",GREEN,msg2.text,DF);
+    if(argc!=2 || !atoi(argv[1])){
+        cerr("Input errato!");
+        exit(1);
     }
-    msgctl(queueId, IPC_RMID, NULL);
+    signal(SIGINT,quit);
+    int n= atoi(argv[1]);
+    if(n>MAX_CHILDS){
+        cerr("Troppi figli!");
+        exit(2);
+    }
+    srand(time(NULL));
+    remove("/home/kativen/gatto");
+    creat("/home/kativen/gatto",0777);
+    key_t key = ftok("/home/kativen/gatto",1);
+    char appo[50];
+    int queueID= msgget(key,0777 | IPC_CREAT);
+    for(int i=1;i<=n;i++){
+        if(!fork()){
+            int x;
+            msg msgr1;
+            msg msgs2;
+            while(1){
+                memset(msgr1.mtext,'\0',50);
+                msgrcv(queueID,&msgr1,sizeof(msgr1.mtext),i,0);
+                if(!strncmp(msgr1.mtext,RCV_MESS,4)){
+                    x=rand()%100;
+                    sprintf(appo,"%d",x);
+                    msgs2.mtype= 12;
+                    strcpy(msgs2.mtext,appo);
+                    msgsnd(queueID,&msgs2,sizeof(msgs2.mtext),0);
+                }else{ // sto inviando il messaggio con il mio numero di nuovo al padre! 
+                    printf("I am %d and this is the number: %s\n",i,msgr1.mtext);
+                }
+            }
+        }
+    }
+    msg msgs1;
+    msg msgr2;
+    int r,num1,num2;
+    char gatt[2];
+    while(1){
+        printf("Inserisci due numeri: "); fflush(stdout);
+        r = read(STDIN_FILENO,&appo,sizeof(appo));
+        appo[r] = '\0';
+        if(strlen(appo)>3){
+            cerr("Stringa troppo lunga!");
+        }else{
+            gatt[0] = appo[0];
+            gatt[1] = '\0';
+            num1= atoi(gatt);
+            num2=  atoi(appo+1);
+            if(num1!=num2 && num1<=n && num2<=n){
+                msgs1.mtype= num1;
+                strcpy(msgs1.mtext,RCV_MESS);
+                msgsnd(queueID,&msgs1,sizeof(msgs1.mtext),0);
+                msgrcv(queueID,&msgr2,sizeof(msgr2.mtext),12,0);
+                msgs1.mtype=num2;
+                strcpy(msgs1.mtext,msgr2.mtext);
+                msgsnd(queueID,&msgs1,sizeof(msgs1.mtext),0);
+            }else cerr("Errore!");
+        }
+        sleep(2);
+    }
     return 0;
 }
