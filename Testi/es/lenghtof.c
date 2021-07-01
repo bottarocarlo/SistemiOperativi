@@ -12,9 +12,6 @@
 #include <string.h>
 #include <errno.h>
 
-#define READ 0
-#define WRITE 1
-//color
 #define RED "\033[0;31m"
 #define GREEN "\033[0;32m"
 #define YELLOW "\033[0;33m"
@@ -24,18 +21,17 @@
 #define WHITE "\033[0;37m"
 #define DF "\033[0m"
 
-#define MAX_DEPHT 5
-
-struct msg_buffer
-{
-    char mtext[10];
-    long mtype;
-}msg;
-
 
 int main(int argc,char ** argv){
+    if(argc < 2){
+        fprintf(stderr,"error usage");
+        return -1;
+    }
+    int appo=0;
+    while(argv[1][appo]!='\0'){
+        appo++;
+    }
     
-
-
+    printf("la frase %s'%s'%s è lunga %d\n",GREEN,argv[1],DF,appo);
     return 0;
 }

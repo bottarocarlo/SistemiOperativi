@@ -24,18 +24,32 @@
 #define WHITE "\033[0;37m"
 #define DF "\033[0m"
 
-#define MAX_DEPHT 5
+#define MAX 10
 
-struct msg_buffer
-{
-    char mtext[10];
-    long mtype;
-}msg;
-
+int master;
 
 int main(int argc,char ** argv){
-    
+    if(argc < 2){
+        fprintf(stderr,"error usage...");
+        exit(-1);
+    }
+    char * fifoname = "/tmo/fifo1";
+    mkfifo(fifoname,S_IRUSR|S_IWUSR);
+    int numChildren = atoi(&argv[1]);
+    printf("creating %d children..\n",numChildren);
+    int br[numChildren];
+    master = getpid();
+    for(int i =0 ;i<numChildren;i++ ){
+        br[i] = fork();
+        if(getpid()!=master){
+            break;
+        }
+    }
 
-
+    if(getpid()==master){
+        //master
+    }else{
+        while (1);
+    }
     return 0;
 }

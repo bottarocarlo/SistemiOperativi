@@ -20,9 +20,11 @@ int main(){
     char * fifoname = "/tmo/fifo1";
     char str1[80],* str2 = "I'm a writer";
     mkfifo(fifoname,S_IRUSR|S_IWUSR);
+    //write
     fd = open(fifoname,O_RDONLY);
     write(fd,str2,strlen(str2)+1);
     close(fd);
+    //read
     fd = open(fifoname, O_RDONLY);
     read(fd,str1,sizeof(str1));
     printf("reader is writing: %s\n",str1);
